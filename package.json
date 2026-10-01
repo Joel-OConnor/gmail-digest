@@ -22,22 +22,22 @@
     "prepare": "node scripts/prepare.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.111.0",
-    "@aws-sdk/client-ssm": "^3.1086.0",
-    "@googleapis/gmail": "^17.0.0",
-    "google-auth-library": "^10.9.0"
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@aws-sdk/client-ssm": "^3.1144.0",
+    "@googleapis/gmail": "^22.0.1",
+    "google-auth-library": "^11.1.0"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.1100.0",
-    "@aws-sdk/client-iam": "^3.1100.0",
-    "@aws-sdk/client-kms": "^3.1100.0",
-    "@aws-sdk/client-lambda": "^3.1100.0",
-    "@aws-sdk/client-scheduler": "^3.1100.0",
-    "@aws-sdk/client-sts": "^3.1100.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.1144.0",
+    "@aws-sdk/client-iam": "^3.1144.0",
+    "@aws-sdk/client-kms": "^3.1144.0",
+    "@aws-sdk/client-lambda": "^3.1144.0",
+    "@aws-sdk/client-scheduler": "^3.1144.0",
+    "@aws-sdk/client-sts": "^3.1144.0",
     "@eslint/js": "^10.0.1",
-    "esbuild": "^0.28.1",
-    "eslint": "^10.8.0",
-    "globals": "^17.7.0"
+    "esbuild": "^0.28.2",
+    "eslint": "^10.11.0",
+    "globals": "^17.13.0"
   },
   "engines": {
     "node": ">=22.13"
