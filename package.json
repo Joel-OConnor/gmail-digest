@@ -1,0 +1,52 @@
+{
+  "name": "gmail-digest",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "An AI inbox digest that runs in your own AWS account: classifies new Gmail against a rubric you write, and emails you a summary with drafted replies.",
+  "scripts": {
+    "build": "esbuild src/handler.mjs --bundle --platform=node --target=node22 --format=cjs --outfile=dist/index.js --external:@aws-sdk/* && node -e \"require('fs').writeFileSync('dist/package.json', JSON.stringify({type: 'commonjs'}))\"",
+    "zip": "cd dist && rm -f function.zip && zip -q -X function.zip index.js package.json",
+    "test": "node --conditions=test --test \"test/*.test.mjs\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test:coverage": "node --conditions=test --test --experimental-test-coverage --test-coverage-exclude=\"test/**\" --test-coverage-exclude=\"config/**\" --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 \"test/*.test.mjs\"",
+    "prebuild": "node scripts/ensure-profile.mjs --check",
+    "pretest": "node scripts/ensure-profile.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "preview": "node scripts/local-invoke.mjs",
+    "bootstrap": "node scripts/bootstrap.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "add-account": "node scripts/get-refresh-token.mjs",
+    "setup": "node scripts/setup.mjs",
+    "setup:profile": "node scripts/setup-profile.mjs",
+    "prepare": "node scripts/prepare.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
+    "@aws-sdk/client-ssm": "^3.1086.0",
+    "@googleapis/gmail": "^17.0.0",
+    "google-auth-library": "^10.9.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.1100.0",
+    "@aws-sdk/client-iam": "^3.1100.0",
+    "@aws-sdk/client-kms": "^3.1100.0",
+    "@aws-sdk/client-lambda": "^3.1100.0",
+    "@aws-sdk/client-scheduler": "^3.1100.0",
+    "@aws-sdk/client-sts": "^3.1100.0",
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.7.0"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "imports": {
+    "#profile": {
+      "test": "./test/fixtures/profile.fixture.mjs",
+      "default": "./config/profile.mjs"
+    }
+  },
+  "license": "MIT"
+}

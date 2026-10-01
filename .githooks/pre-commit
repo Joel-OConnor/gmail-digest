@@ -1,0 +1,42 @@
+#!/bin/sh
+# Last line of defence before personal data reaches a public repo.
+# Bypass with --no-verify only if you are certain.
+
+# R so a rename is checked under its new name, not waved through. quotePath off
+# so a non-ASCII name comes back bare instead of in quotes that dodge ^config/.
+staged=$(git -c core.quotePath=false diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+# Files that must never be committed, whatever .gitignore says. All of config/
+# except the templates, which also catches the profile.mjs.bak that
+# setup:profile leaves behind.
+blocked=$(printf '%s\n' "$staged" \
+  | grep -E '^config/|(^|/)\.env[^/]*$|^previews/' \
+  | grep -vE '^config/[^/]+\.example\.mjs$|^\.env\.example$' || true)
+if [ -n "$blocked" ]; then
+  echo "pre-commit: refusing to commit files that hold your personal setup:" >&2
+  printf '%s\n' "$blocked" | sed 's/^/  /' >&2
+  exit 1
+fi
+
+# Credential shapes in the lines being added, the same ones
+# test/no-leaks.test.mjs looks for. Removing a leaked key must not be blocked,
+# so only '+' lines count, minus the '+++' file header.
+added=$(git diff --cached -U0 --no-color --no-ext-diff --diff-filter=ACMR \
+  | grep '^+' | grep -v '^+++ ' || true)
+if printf '%s\n' "$added" | grep -qE \
+  'sk-ant-[A-Za-z0-9_-]{10,}|GOCSPX-[A-Za-z0-9_-]{10,}|(^|[^A-Za-z0-9_])1//[A-Za-z0-9_-]{20,}|(^|[^A-Za-z0-9_])[0-9]{12}([^A-Za-z0-9_]|$)'; then
+  echo "pre-commit: staged content looks like it contains an API key, client secret, refresh token or AWS account id." >&2
+  exit 1
+fi
+
+# The shapes above can't know your email address or rubric. This test builds
+# its deny-list from your local .env and profile, so it is what actually keeps
+# them out of a commit.
+command -v node >/dev/null 2>&1 || { echo "pre-commit: node is not on PATH, so the leak check can't run." >&2; exit 1; }
+if ! node --conditions=test --test test/no-leaks.test.mjs >/dev/null 2>&1; then
+  echo "pre-commit: the leak check failed. Run 'node --conditions=test --test test/no-leaks.test.mjs' to see why." >&2
+  exit 1
+fi
+
+exit 0

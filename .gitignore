@@ -1,0 +1,18 @@
+node_modules/
+dist/
+*.zip
+*.log
+*.tmp
+*.bak
+.DS_Store
+
+# Local digest previews. These contain real email content.
+previews/
+
+# Your setup. Never committed.
+#   .env             connection details and settings  (template: .env.example)
+#   config/profile.mjs  your rubric and voice          (template: config/profile.example.mjs)
+.env*
+!.env.example
+config/*
+!config/*.example.mjs
