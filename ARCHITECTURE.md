@@ -192,7 +192,7 @@ Run finished: status=<status>
 
 `DRY_RUN` never writes the checkpoint, whatever the outcome. `sent-checkpoint-stale` also logs an error saying the next digest will repeat these emails; it deliberately doesn't throw (see [Failures, retries and duplicate sends](#failures-retries-and-duplicate-sends)).
 
-A run that throws logs no `Run finished` line. Lambda logs the error instead, already stripped down by `sanitizeError`: the error name, status, the mailbox that failed when it's known, the message, and a fix hint for the two failures that recur. A revoked token (`invalid_grant`) and a token missing the send scope (`insufficient authentication scopes`) both point you at `npm run add-account <name>`, with the failing mailbox's name filled in. For what to do about each log line, see [the troubleshooting table in OPERATIONS.md](OPERATIONS.md#troubleshooting).
+A run that throws logs no `Run finished` line. Lambda logs the error instead, already stripped down by `sanitizeError`: the error name, status, the mailbox that failed when it's known, the message, and a fix hint for the auth failures that recur. A revoked token (`invalid_grant`) and a token missing the send scope (`insufficient authentication scopes`) both point you at `npm run add-account <name>`, with the failing mailbox's name filled in. A wrong Google client ID or secret (`invalid_client`) points you at `npm run setup -- --force`. For what to do about each log line, see [the troubleshooting table in OPERATIONS.md](OPERATIONS.md#troubleshooting).
 
 ## Modules
 
@@ -284,11 +284,12 @@ The function can read everything under its prefix but write only the checkpoint,
 
 ## Failures, retries and duplicate sends
 
-Five retry layers stack up:
+Six retry layers stack up:
 
 | layer | covers | policy |
 |---|---|---|
-| `withRetry` in `gmail.mjs` | every Gmail call, including `messages.send` | 2 retries on any error, about 1 s then 2 s plus up to 250 ms jitter |
+| Google client libraries (gaxios) | Gmail reads and OAuth token refreshes, not `messages.send` | 3 retries on 408, 429 and 5xx, plus 2 on no response, with exponential backoff. Built into `@googleapis/gmail` and `google-auth-library`, not configured here |
+| `withRetry` in `gmail.mjs` | every Gmail call, including `messages.send` | 2 retries on any error, about 1 s then 2 s plus up to 250 ms jitter. It wraps the layer above, so a Gmail read can take up to 12 attempts |
 | Anthropic SDK | each classify call | `maxRetries: 3`, 120 s timeout per attempt (the SDK default of 10 minutes is as long as the whole 600 s Lambda, so a hung request would end the run before any retry) |
 | AWS SDK v3 | SSM reads and the checkpoint write | SDK default, not configured here |
 | EventBridge Scheduler | delivering the invocation | `RetryPolicy: { MaximumRetryAttempts: 1 }` |
@@ -331,7 +332,7 @@ What goes where:
 - **SSM** holds the secrets and tokens (encrypted) and the checkpoint timestamp. Nothing else is stored: no mail, no classifications, no digests.
 - **Lambda environment variables** hold the settings `deploy` sets, including `DIGEST_RECIPIENT` and `ACCOUNTS`. No credentials.
 
-What CloudWatch logs contain: counts, the window timestamps, the checkpoint, the scan scope, mailbox names in error messages, and sanitized errors (name, status, message, stack). Never a subject, sender or body. `sanitizeError` exists because Gmail and Anthropic errors carry the whole request, rendered digest included, in enumerable properties that Lambda would otherwise write to the log.
+What CloudWatch logs contain: counts, the window timestamps, the checkpoint, the scan scope, mailbox names in error messages, and sanitized errors (name, status, message, stack). Never a subject, sender or body. `sanitizeError` exists because client errors carry much more than their message in enumerable properties that Lambda would otherwise write to the log: a Gmail error holds its request (the rendered digest for a failed send, the refresh token and client secret for a failed token refresh), and an Anthropic error holds the full response.
 
 `DRY_RUN=true` prints the full rendered digest only when run locally. Inside Lambda it logs the digest's own subject line (date and counts) and withholds the body, since CloudWatch would keep every summary and reply draft long after the run.
 

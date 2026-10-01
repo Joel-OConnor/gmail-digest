@@ -44,7 +44,7 @@ For the schedule, use the `get-schedule` command under [Changing run times](#cha
 
 ## Troubleshooting
 
-Every run that finishes logs `Run finished: status=<status>`. A run that fails logs an error instead, and no `Run finished` line. Errors look like `Error (status 400, account work): <message>`. The error name and status vary (`n/a` when there's no status), and the `account` part appears only when one mailbox caused it, so search for the status or a phrase from the message. For the two common token problems the message ends with the exact `npm run add-account <name>` to run.
+Every run that finishes logs `Run finished: status=<status>`. A run that fails logs an error instead, and no `Run finished` line. Errors look like `Error (status 400, account work): <message>`. The error name and status vary (`n/a` when there's no status), and the `account` part appears only when one mailbox caused it, so search for the status or a phrase from the message. For the common Google auth problems the message ends with the exact command to run.
 
 ### Statuses in the logs
 
@@ -61,6 +61,7 @@ Every run that finishes logs `Run finished: status=<status>`. A run that fails l
 | what you see | what it means | what to do |
 |---|---|---|
 | Error containing `invalid_grant` | Google revoked that mailbox's refresh token. A Google password change does this. So does authorising a mailbox while the app's publishing status was **Testing**, because Google expires those tokens after 7 days. | In Google Cloud, open Google Auth Platform, then **Audience**, and make sure the publishing status is **In production**. Then `npm run add-account <name>`. |
+| Error containing `invalid_client` | The Google OAuth client ID or secret stored in SSM is wrong, or that client was deleted in Google Cloud. | `npm run setup -- --force` with the right values (see [Replacing a key](#replacing-a-key)). If it's a new client, re-run `npm run add-account <name>` for each mailbox too. |
 | Error containing `insufficient authentication scopes` | The token can read mail but not send. A permission checkbox was left unticked at consent. Dry runs never send, so this hides until the first real digest. | `npm run add-account <name>` and tick every checkbox. |
 | A token keeps dying after you've re-authorised many times | Google keeps at most 100 refresh tokens per Google account per OAuth client and quietly invalidates the oldest. | Authorise each mailbox once and leave it alone. |
 | `Missing required SSM parameters: <paths>` | A key was never stored, or a mailbox in the deployed `ACCOUNTS` has no token. The whole run fails. | For `google-client-*` or `anthropic-api-key`: `npm run setup`. For `accounts/<name>/refresh-token`: `npm run add-account <name>`. |

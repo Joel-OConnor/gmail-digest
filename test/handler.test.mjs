@@ -480,13 +480,16 @@ test('sanitizeError falls back through status sources', () => {
   assert.match(sanitizeError({ message: 'a' }).message, /status n\/a/);
 });
 
-test('sanitizeError appends the fix for the two recurring auth failures', () => {
+test('sanitizeError appends the fix for the recurring auth failures', () => {
   const scopes = sanitizeError(new Error('Request had insufficient authentication scopes.'));
   assert.match(scopes.message, /lacks gmail\.send\. Run `npm run add-account <name>` and tick every/);
   const revoked = sanitizeError(new Error('invalid_grant: Token has been expired or revoked.'));
   assert.match(revoked.message, /revoked \(a Google password change does this\)/);
   assert.match(revoked.message, /Re-authorise with `npm run add-account <name>`/);
-  for (const msg of [scopes.message, revoked.message]) {
+  const client = sanitizeError(new Error('invalid_client'));
+  assert.match(client.message, /client ID or secret stored in SSM is wrong/);
+  assert.match(client.message, /`npm run setup -- --force`/);
+  for (const msg of [scopes.message, revoked.message, client.message]) {
     // Neither the old script path nor the legacy single-account parameter is
     // what a multi-account install should touch.
     assert.ok(!msg.includes('get-refresh-token'), msg);

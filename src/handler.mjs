@@ -49,11 +49,13 @@ export async function runDigest(event, overrides) {
 }
 
 /**
- * Gmail/Anthropic client errors carry the full request — including the rendered
- * digest — in enumerable properties, which the Lambda runtime would serialize
- * into CloudWatch. Rebuild a bare Error so only the message survives, name
- * the mailbox that failed when we know it, and append the fix for the two
- * failures that actually recur in production.
+ * Client errors carry far more than their message in enumerable properties. A
+ * Gmail error holds the request it failed on (the rendered digest for a failed
+ * send, the refresh token and client secret for a failed token refresh), and
+ * an Anthropic error holds the full response. The Lambda runtime would
+ * serialize all of it into CloudWatch. Rebuild a bare Error so only the message
+ * survives, name the mailbox that failed when we know it, and append the fix
+ * for the auth failures that actually recur.
  */
 export function sanitizeError(err) {
   const status = err?.status ?? err?.response?.status ?? err?.code ?? 'n/a';
@@ -69,6 +71,10 @@ export function sanitizeError(err) {
     hint =
       ' Fix: the refresh token was revoked (a Google password change does this).' +
       ` Re-authorise with \`${reauth}\`.`;
+  } else if (/invalid_client/i.test(message)) {
+    hint =
+      ' Fix: the Google OAuth client ID or secret stored in SSM is wrong.' +
+      ' Store the right ones with `npm run setup -- --force`.';
   }
   const where = account ? `, account ${account}` : '';
   const clean = new Error(`${err?.name ?? 'Error'} (status ${status}${where}): ${message}${hint}`);
